@@ -25,13 +25,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 });
 
-async function recognize({ image, psm }) {
+async function recognize({ images, psm }) {
   const worker = await workerReady;
   await worker.setParameters({
     tessedit_pageseg_mode: String(psm),
     preserve_interword_spaces: '1',
   });
-  const { data } = await worker.recognize(image);
+  let { data } = await worker.recognize(images.gray);
+  if (data.confidence < 90) {
+    // Low confidence (busy background): retry on the text-fill-only image, keep the surer read.
+    const alt = await worker.recognize(images.ink).catch(() => null);
+    if (alt && alt.data.confidence > data.confidence) data = alt.data;
+  }
   return { text: tidy(data.text) };
 }
 

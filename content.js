@@ -170,12 +170,78 @@
     }
     wctx.putImageData(img, 0, 0);
 
-    const out = el('canvas', { width: w + pad * 2, height: h + pad * 2 });
-    const octx = out.getContext('2d');
-    octx.fillStyle = '#fff';
-    octx.fillRect(0, 0, out.width, out.height);
-    octx.drawImage(work, pad, pad);
-    return out.toDataURL('image/png');
+    const frame = () => {
+      const out = el('canvas', { width: w + pad * 2, height: h + pad * 2 });
+      const octx = out.getContext('2d');
+      octx.fillStyle = '#fff';
+      octx.fillRect(0, 0, out.width, out.height);
+      octx.drawImage(work, pad, pad);
+      return out.toDataURL('image/png');
+    };
+    const gray = frame();
+
+    // Second candidate for captions on busy video: keep only the brightest class (text fill),
+    // then drop bright blobs touching the crop edge (sky, lights, box edges). Outlines vanish.
+    const ink = new Uint8Array(n);
+    const t2 = brightCut(hist);
+    for (let i = 0; i < n; i++) ink[i] = lum[i] >= t2 ? 1 : 0;
+    dropEdgeBlobs(ink, w, h);
+    for (let i = 0; i < n; i++) {
+      const j = i * 4;
+      px[j] = px[j + 1] = px[j + 2] = ink[i] ? 0 : 255;
+    }
+    wctx.putImageData(img, 0, 0);
+    return { gray, ink: frame() };
+  }
+
+  // 3-class Otsu on the luminance histogram; returns the lower bound of the brightest class.
+  function brightCut(hist) {
+    const P = new Float64Array(257);
+    const S = new Float64Array(257);
+    for (let i = 0; i < 256; i++) {
+      P[i + 1] = P[i] + hist[i];
+      S[i + 1] = S[i] + i * hist[i];
+    }
+    const part = (a, b) => (P[b] > P[a] ? (S[b] - S[a]) ** 2 / (P[b] - P[a]) : 0);
+    let best = -1;
+    let cut = 170;
+    for (let a = 1; a < 255; a++) {
+      for (let b = a + 1; b < 256; b++) {
+        const v = part(0, a) + part(a, b) + part(b, 256);
+        if (v > best) {
+          best = v;
+          cut = b;
+        }
+      }
+    }
+    return cut;
+  }
+
+  function dropEdgeBlobs(ink, w, h) {
+    const stack = new Int32Array(w * h);
+    let top = 0;
+    const push = (i) => {
+      if (ink[i]) {
+        ink[i] = 0;
+        stack[top++] = i;
+      }
+    };
+    for (let x = 0; x < w; x++) {
+      push(x);
+      push((h - 1) * w + x);
+    }
+    for (let y = 0; y < h; y++) {
+      push(y * w);
+      push(y * w + w - 1);
+    }
+    while (top) {
+      const i = stack[--top];
+      const x = i % w;
+      if (x > 0) push(i - 1);
+      if (x < w - 1) push(i + 1);
+      if (i >= w) push(i - w);
+      if (i < w * (h - 1)) push(i + w);
+    }
   }
 
   async function copy(text) {
@@ -357,8 +423,8 @@
       setStatus('Reading text…', 'busy');
       placePanel(r);
       try {
-        const image = prepare(bmp, r);
-        const res = await chrome.runtime.sendMessage({ target: 'background', type: 'ocr', image, psm });
+        const images = prepare(bmp, r);
+        const res = await chrome.runtime.sendMessage({ target: 'background', type: 'ocr', images, psm });
         if (id !== job) return;
         if (!res || res.error) throw new Error(res?.error || 'No response');
         textarea.value = res.text;
