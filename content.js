@@ -10,7 +10,7 @@
 
     .stage {
       --accent: #0a84ff; --ok: #30d158; --warn: #ff9f0a;
-      --spring: cubic-bezier(.34, 1.45, .5, 1);
+      --spring: cubic-bezier(.32, 1.32, .5, 1);
       position: absolute; inset: 0; overflow: hidden; user-select: none; cursor: crosshair; background: #000;
       font: 500 13px/1.3 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
       color: #fff; animation: fade .2s ease-out both;
@@ -22,99 +22,77 @@
     @keyframes draw { to { stroke-dashoffset: 0; } }
 
     canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; }
-    .scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .34); }
+    .scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .3); }
 
+    /* Liquid glass: dark-tinted blur, a crisp 1px rim, a top specular edge and one soft drop shadow. No glows. */
     .glass {
       position: absolute; z-index: 3; white-space: nowrap; cursor: default;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.22) 0%, rgba(255,255,255,.04) 48%, rgba(255,255,255,.09) 100%),
-        rgba(24, 24, 28, .52);
-      -webkit-backdrop-filter: blur(26px) saturate(190%); backdrop-filter: blur(26px) saturate(190%);
-      border: 1px solid rgba(255,255,255,.24);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(255,255,255,.06),
-        0 14px 36px rgba(0,0,0,.38), 0 2px 6px rgba(0,0,0,.28);
+      background: rgba(34, 34, 38, .6);
+      -webkit-backdrop-filter: blur(32px) saturate(180%); backdrop-filter: blur(32px) saturate(180%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), inset 0 1px 0 rgba(255,255,255,.3), 0 8px 24px rgba(0,0,0,.3);
     }
 
     .pill {
       top: 18px; left: 50%; display: flex; align-items: center; gap: 10px;
-      height: 46px; padding: 0 7px 0 18px; border-radius: 23px;
+      height: 44px; padding: 0 6px 0 18px; border-radius: 22px;
       transform: translateX(-50%); animation: drop .5s var(--spring) both;
     }
-    @keyframes drop { from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(.94); } }
-    .status { display: flex; align-items: center; gap: 9px; font-weight: 600; letter-spacing: -.005em; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
-    .status small { font-weight: 500; opacity: .7; }
-    .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,.28); border-top-color: #fff; animation: spin .75s linear infinite; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
-    .dot.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
-    .sep { width: 1px; height: 22px; background: rgba(255,255,255,.2); }
+    @keyframes drop { from { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(.95); } }
+    .status { display: flex; align-items: center; gap: 9px; font-weight: 600; letter-spacing: -.01em; }
+    .status small { font-weight: 500; color: rgba(255,255,255,.62); }
+    .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); border-top-color: #fff; animation: spin .75s linear infinite; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+    .dot.warn { background: var(--warn); }
+    .sep { width: 1px; height: 20px; background: rgba(255,255,255,.18); }
 
     .btn {
       display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 16px;
-      font-weight: 600; background: rgba(255,255,255,.14); box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
-      transition: background .15s, transform .18s var(--spring), box-shadow .15s;
+      font-weight: 600; background: rgba(255,255,255,.13);
+      transition: background .15s, transform .18s var(--spring);
     }
-    .btn:hover { background: rgba(255,255,255,.25); }
-    .btn:active { transform: scale(.95); }
-    .btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .btn:hover { background: rgba(255,255,255,.22); }
+    .btn:active { transform: scale(.96); }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .btn svg { width: 16px; height: 16px; flex: none; }
     .btn.icon { width: 32px; padding: 0; justify-content: center; }
-    .btn.primary {
-      background: linear-gradient(180deg, #4aa8ff, var(--accent));
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(10,132,255,.45);
-    }
-    .btn.primary:hover { background: linear-gradient(180deg, #62b4ff, #1a8fff); }
-    .btn.done {
-      background: linear-gradient(180deg, #55df78, var(--ok)); pointer-events: none;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(48,209,88,.45);
-    }
+    .btn.primary { background: var(--accent); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+    .btn.primary:hover { background: #3396ff; }
+    .btn.done { background: var(--ok); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); pointer-events: none; }
     .btn.done path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: draw .35s .05s ease-out forwards; }
     kbd {
       font: 600 11px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-      padding: 3px 6px; border-radius: 6px; background: rgba(255,255,255,.2);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.2); letter-spacing: .02em;
+      padding: 3px 6px; border-radius: 6px; background: rgba(255,255,255,.16); letter-spacing: .02em;
     }
+    .btn.primary kbd, .btn.done kbd { background: rgba(255,255,255,.22); }
 
-    .bar { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 7px 0 16px; border-radius: 23px; animation: pop .42s var(--spring) both; }
-    @keyframes pop { from { opacity: 0; transform: scale(.86) translateY(6px); } }
-    .count { font-weight: 500; opacity: .85; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+    .bar { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 6px 0 16px; border-radius: 22px; animation: pop .4s var(--spring) both; }
+    @keyframes pop { from { opacity: 0; transform: scale(.88) translateY(6px); } }
+    .count { font-weight: 500; color: rgba(255,255,255,.75); }
 
     .hint {
       bottom: 20px; left: 50%; display: flex; align-items: center; gap: 16px; height: 34px; padding: 0 16px;
-      border-radius: 17px; font-size: 12px; color: rgba(255,255,255,.88);
+      border-radius: 17px; font-size: 12px; color: rgba(255,255,255,.8);
       transform: translateX(-50%); animation: rise .5s .1s var(--spring) both;
     }
     @keyframes rise { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
     .hint span { display: inline-flex; align-items: center; gap: 6px; }
 
     .ln {
-      position: absolute; z-index: 1; border-radius: 7px; pointer-events: none;
-      background: rgba(255,255,255,.09);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.32), 0 0 0 1px rgba(0,0,0,.18);
-      animation: pop-in .38s calc(var(--i) * 28ms) var(--spring) both;
+      position: absolute; z-index: 1; border-radius: 8px; pointer-events: none;
+      background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.26);
+      animation: pop-in .36s calc(var(--i) * 28ms) var(--spring) both;
     }
-    @keyframes pop-in { from { opacity: 0; transform: scale(.96); } }
-    .hov {
-      position: absolute; z-index: 1; border-radius: 5px; pointer-events: none;
-      background: rgba(255,255,255,.22); box-shadow: inset 0 0 0 1px rgba(255,255,255,.65);
-    }
-    .hl {
-      position: absolute; z-index: 2; border-radius: 6px; pointer-events: none;
-      background: rgba(10,132,255,.42);
-      box-shadow: inset 0 0 0 1px rgba(130,196,255,.85), 0 0 16px rgba(10,132,255,.45);
-    }
-    .sweep { position: absolute; z-index: 1; border-radius: 12px; overflow: hidden; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); }
+    @keyframes pop-in { from { opacity: 0; transform: scale(.97); } }
+    .hov { position: absolute; z-index: 1; border-radius: 8px; pointer-events: none; background: rgba(255,255,255,.1); }
+    .hl { position: absolute; z-index: 2; border-radius: 3px; pointer-events: none; background: rgba(10,132,255,.45); }
+    .sweep { position: absolute; z-index: 1; border-radius: 12px; overflow: hidden; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.24); }
     .sweep::after {
       content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 38%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent);
       animation: sweep 1.3s ease-in-out infinite;
     }
     @keyframes sweep { from { transform: translateX(-110%); } to { transform: translateX(300%); } }
-    .marq {
-      position: absolute; z-index: 2; border-radius: 8px; pointer-events: none;
-      border: 1.5px solid rgba(255,255,255,.9); background: rgba(10,132,255,.2);
-      box-shadow: 0 0 0 100vmax rgba(0,0,0,.22), 0 0 18px rgba(10,132,255,.4);
-    }
+    .marq { position: absolute; z-index: 2; border-radius: 6px; pointer-events: none; border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.1); }
     @media (prefers-reduced-motion: reduce) {
       * { animation-duration: .01ms !important; animation-delay: 0s !important; transition: none !important; }
     }
@@ -505,7 +483,8 @@
       'div',
       { className: 'glass hint' },
       key('Drag', 'select text'),
-      key('Double-click', 'line'),
+      key('Double-click', 'word'),
+      key('Triple-click', 'line'),
       key(MOD + 'A', 'all'),
       key('Esc', 'close'),
     );
@@ -518,8 +497,9 @@
     let raw = [];
     let lines = [];
     let words = [];
-    let wordRects = [];
+    let glyphs = [];
     let lineRects = [];
+    let lineSel = [];
     let sel = null;
     let drag = null;
     let busy = false;
@@ -568,6 +548,25 @@
       node.style.height = r.b - r.t + 'px';
     };
 
+    // Flat list of characters in reading order, with a space between words and a newline between
+    // lines. A selection is a caret range [a, b) over it, so it can start and end between any letters.
+    const buildGlyphs = () => {
+      glyphs = [];
+      lines.forEach((line, li) => {
+        line.gs = glyphs.length;
+        line.words.forEach((w, wi) => {
+          if (wi) glyphs.push({ ch: ' ', x0: line.words[wi - 1].x1, x1: w.x0 });
+          const chars = Array.from(w.t);
+          const b = w.b?.length === chars.length + 1 ? w.b : chars.map((_, k) => w.x0 + ((w.x1 - w.x0) * k) / chars.length).concat(w.x1);
+          w.gs = glyphs.length;
+          chars.forEach((ch, k) => glyphs.push({ ch, x0: b[k], x1: b[k + 1] }));
+          w.ge = glyphs.length;
+        });
+        line.ge = glyphs.length;
+        if (li < lines.length - 1) glyphs.push({ ch: '\n', x0: line.x1, x1: line.x1 });
+      });
+    };
+
     const measure = () => {
       const box = imageBox();
       const s = box.width / bmp.width;
@@ -577,22 +576,26 @@
         const pad = Math.max(3, (l.y1 - l.y0) * s * 0.18);
         return { l: toX(l.x0) - pad, r: toX(l.x1) + pad, t: toY(l.y0) - pad * 0.6, b: toY(l.y1) + pad * 0.6 };
       });
-      wordRects = words.map((w) => {
-        const L = lineRects[w.line];
-        return { l: toX(w.x0) - 2, r: toX(w.x1) + 2, t: L.t, b: L.b };
+      lineSel = lines.map((l) => {
+        const pad = Math.max(1.5, (l.y1 - l.y0) * s * 0.08);
+        return { t: toY(l.y0) - pad, b: toY(l.y1) + pad };
       });
+      for (const g of glyphs) {
+        g.l = toX(g.x0);
+        g.r = toX(g.x1);
+      }
     };
 
     // ---- selection ----
-    const wordAt = (p) => wordRects.findIndex((r) => p.x >= r.l - 4 && p.x <= r.r + 4 && p.y >= r.t && p.y <= r.b);
+    const lineAtPoint = (p) => lineRects.findIndex((r) => p.x >= r.l && p.x <= r.r && p.y >= r.t && p.y <= r.b);
 
-    const nearestWord = (p) => {
+    const nearestLine = (p) => {
       let best = -1;
       let bestScore = Infinity;
-      wordRects.forEach((r, i) => {
+      lineRects.forEach((r, i) => {
         const dx = Math.max(r.l - p.x, 0, p.x - r.r);
         const dy = Math.max(r.t - p.y, 0, p.y - r.b);
-        const score = dx + dy * 3;
+        const score = dx + dy * 3 + Math.abs(p.y - (r.t + r.b) / 2) * 0.01;
         if (score < bestScore) {
           bestScore = score;
           best = i;
@@ -601,19 +604,34 @@
       return best;
     };
 
-    const selectedText = () => {
-      if (!sel) return '';
-      let out = '';
-      for (let i = sel.a; i <= sel.b; i++) {
-        if (i > sel.a) out += words[i].line === words[i - 1].line ? ' ' : '\n';
-        out += words[i].t;
+    // Caret index (0..glyphs.length) nearest to the pointer: before the first glyph whose middle is right of it.
+    const caretAt = (p) => {
+      const line = lines[nearestLine(p)];
+      for (let i = line.gs; i < line.ge; i++) {
+        if (p.x < (glyphs[i].l + glyphs[i].r) / 2) return i;
       }
-      return out;
+      return line.ge;
     };
 
+    const glyphAt = (p) => {
+      const line = lines[nearestLine(p)];
+      let best = line.gs;
+      let bestDist = Infinity;
+      for (let i = line.gs; i < line.ge; i++) {
+        const d = Math.max(glyphs[i].l - p.x, 0, p.x - glyphs[i].r);
+        if (d < bestDist) {
+          bestDist = d;
+          best = i;
+        }
+      }
+      return best;
+    };
+
+    const selectedText = () => (sel ? glyphs.slice(sel.a, sel.b).map((g) => g.ch).join('').trim() : '');
+
     const placeBar = (rects) => {
-      const n = sel.b - sel.a + 1;
-      count.textContent = `${n} word${n === 1 ? '' : 's'}`;
+      const n = Array.from(selectedText()).length;
+      count.textContent = `${n} character${n === 1 ? '' : 's'}`;
       bar.hidden = false;
       const { W, H } = imageBox();
       const gap = 14;
@@ -622,28 +640,27 @@
       const first = rects[0];
       const last = rects[rects.length - 1];
       const mid = (Math.min(...rects.map((r) => r.l)) + Math.max(...rects.map((r) => r.r))) / 2;
-      let top = last.b + gap;
-      if (top + bh > H - gap) top = first.t - gap - bh;
-      bar.style.top = clamp(top, gap, H - bh - gap) + 'px';
-      bar.style.left = clamp(mid - bw / 2, gap, W - bw - gap) + 'px';
+      const left = clamp(mid - bw / 2, gap, W - bw - gap);
+      // Prefer below the selection, then above; skip a spot that would cover other detected text.
+      const free = (t) => t >= gap && t + bh <= H - gap && !lineRects.some((r) => t < r.b && t + bh > r.t && left < r.r && left + bw > r.l);
+      const top = [last.b + gap, first.t - gap - bh].find(free) ?? clamp(last.b + gap, gap, H - bh - gap);
+      bar.style.top = top + 'px';
+      bar.style.left = left + 'px';
     };
 
     const renderSel = () => {
       hlLayer.replaceChildren();
-      if (!sel) {
+      const rects = [];
+      if (sel) {
+        lines.forEach((line, i) => {
+          const lo = Math.max(sel.a, line.gs);
+          const hi = Math.min(sel.b, line.ge);
+          if (hi > lo) rects.push({ l: glyphs[lo].l, r: glyphs[hi - 1].r, t: lineSel[i].t, b: lineSel[i].b });
+        });
+      }
+      if (!rects.length) {
         bar.hidden = true;
         return;
-      }
-      const rects = [];
-      for (let i = sel.a; i <= sel.b; i++) {
-        const w = words[i];
-        const r = wordRects[i];
-        const last = rects[rects.length - 1];
-        if (last && last.line === w.line) {
-          last.r = r.r;
-        } else {
-          rects.push({ line: w.line, l: r.l, r: r.r, t: lineRects[w.line].t, b: lineRects[w.line].b });
-        }
       }
       for (const r of rects) {
         const node = el('div', { className: 'hl' });
@@ -654,17 +671,26 @@
       else placeBar(rects);
     };
 
-    const setSel = (a, b) => {
-      sel = { a: Math.min(a, b), b: Math.max(a, b) };
+    const setRange = (a, b) => {
+      sel = a === b ? null : { a: Math.min(a, b), b: Math.max(a, b) };
       if (copyBtn.classList.contains('done')) setCopyIdle();
       renderSel();
     };
 
-    const selectAll = () => words.length && setSel(0, words.length - 1);
+    const selectAll = () => glyphs.length && setRange(0, glyphs.length);
 
-    const selectLine = (i) => {
-      const idx = words.reduce((acc, w, k) => (w.line === words[i].line ? [...acc, k] : acc), []);
-      setSel(idx[0], idx[idx.length - 1]);
+    const selectLine = (i) => setRange(lines[i].gs, lines[i].ge);
+
+    // Word under the pointer, minus punctuation stuck to its ends.
+    const selectWordAt = (p) => {
+      const g = glyphAt(p);
+      const w = words.find((x) => g < x.ge) ?? words[words.length - 1];
+      const isText = (i) => /[\p{L}\p{N}]/u.test(glyphs[i].ch);
+      let a = w.gs;
+      let b = w.ge;
+      while (a < b - 1 && !isText(a)) a++;
+      while (b > a + 1 && !isText(b - 1)) b--;
+      setRange(a, b);
     };
 
     const render = () => {
@@ -677,7 +703,7 @@
           return node;
         }),
       );
-      allBtn.hidden = !words.length;
+      allBtn.hidden = !glyphs.length;
       renderSel();
     };
 
@@ -687,7 +713,7 @@
       const res = await chrome.runtime.sendMessage({ target: 'background', type: 'scan', images, psm });
       if (!res || res.error) throw new Error(res?.error || 'No response');
       const back = (v, o) => o + (v - geo.pad) / geo.scale;
-      return res.words.map((w) => ({ t: w.t, x0: back(w.x0, geo.sx), y0: back(w.y0, geo.sy), x1: back(w.x1, geo.sx), y1: back(w.y1, geo.sy) }));
+      return res.words.map((w) => ({ t: w.t, b: w.b.map((x) => back(x, geo.sx)), x0: back(w.x0, geo.sx), y0: back(w.y0, geo.sy), x1: back(w.x1, geo.sx), y1: back(w.y1, geo.sy) }));
     };
 
     const detect = async (rect, psm, merge) => {
@@ -707,15 +733,15 @@
         const inside = (w) => (w.x0 + w.x1) / 2 >= px.x0 && (w.x0 + w.x1) / 2 <= px.x1 && (w.y0 + w.y1) / 2 >= px.y0 && (w.y0 + w.y1) / 2 <= px.y1;
         raw = merge ? raw.filter((w) => !inside(w)).concat(found) : found;
         ({ lines, words } = layout(raw));
+        buildGlyphs();
         render();
         if (!found.length) {
           setStatus('warn', merge ? 'No text in that area' : 'No text found', 'Drag over an area to scan it');
         } else {
           setStatus('ok', `${words.length} word${words.length === 1 ? '' : 's'} detected`);
           if (merge) {
-            const fresh = new Set(found);
-            const idx = words.flatMap((w, i) => (fresh.has(w) ? [i] : []));
-            setSel(idx[0], idx[idx.length - 1]);
+            const fresh = words.filter((w) => found.includes(w));
+            setRange(Math.min(...fresh.map((w) => w.gs)), Math.max(...fresh.map((w) => w.ge)));
           }
         }
       } catch (err) {
@@ -731,9 +757,11 @@
 
     // ---- copy ----
     const doCopy = async () => {
-      if (busy || !words.length) return;
+      if (busy || !glyphs.length) return;
       if (!sel) selectAll();
-      const ok = await copy(selectedText());
+      const text = selectedText();
+      if (!text) return;
+      const ok = await copy(text);
       if (ui?.host !== host) return;
       if (ok) {
         copyBtn.className = 'btn done';
@@ -773,7 +801,7 @@
     // ---- pointer ----
     const setHover = (i) => {
       hov.hidden = i < 0;
-      if (i >= 0) place(hov, wordRects[i]);
+      if (i >= 0) place(hov, lineRects[i]);
       stage.style.cursor = i >= 0 ? 'text' : '';
     };
 
@@ -784,13 +812,13 @@
       const p = point(e);
       const now = e.timeStamp;
       clicks = now - clicks.t < 450 && Math.hypot(p.x - clicks.x, p.y - clicks.y) < 8 ? { ...clicks, t: now, n: clicks.n + 1 } : { t: now, n: 1, x: p.x, y: p.y };
-      const hit = wordAt(p);
-      if (hit >= 0) {
-        if (clicks.n >= 3) selectAll();
-        else if (clicks.n === 2) selectLine(hit);
+      if (lineAtPoint(p) >= 0) {
+        if (clicks.n >= 3) selectLine(nearestLine(p));
+        else if (clicks.n === 2) selectWordAt(p);
         else {
-          drag = { kind: 'text', anchor: hit };
-          setSel(hit, hit);
+          const c = caretAt(p);
+          drag = { kind: 'text', anchor: c };
+          setRange(c, c);
         }
       } else {
         sel = null;
@@ -802,12 +830,11 @@
     stage.addEventListener('pointermove', (e) => {
       const p = point(e);
       if (!drag) {
-        if (!busy) setHover(wordAt(p));
+        if (!busy) setHover(lineAtPoint(p));
         return;
       }
       if (drag.kind === 'text') {
-        const f = nearestWord(p);
-        if (f >= 0) setSel(drag.anchor, f);
+        setRange(drag.anchor, caretAt(p));
       } else {
         drag.to = p;
         setHover(-1);

@@ -31,12 +31,30 @@ function isWord(w) {
   return w.confidence >= 60 && letters.length > 0 && (letters.length > 1 || w.confidence >= 85);
 }
 
+// x positions of the n+1 gaps around a word's n characters, so the UI can place a caret between
+// any two letters. Falls back to an even split if Tesseract's symbol count does not match.
+function bounds(w, text) {
+  const n = Array.from(text).length;
+  const { x0, x1 } = w.bbox;
+  const sym = w.symbols ?? [];
+  const b = [x0];
+  for (let i = 1; i < n; i++) {
+    const cut = sym.length === n ? (sym[i - 1].bbox.x1 + sym[i].bbox.x0) / 2 : x0 + ((x1 - x0) * i) / n;
+    b.push(Math.min(x1, Math.max(b[i - 1], cut)));
+  }
+  b.push(x1);
+  return b;
+}
+
 async function readWords(worker, image) {
   const { data } = await worker.recognize(image, {}, { blocks: true });
   return data.blocks
     .flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words)))
     .filter(isWord)
-    .map((w) => ({ t: w.text.trim(), c: w.confidence, ...w.bbox }));
+    .map((w) => {
+      const t = w.text.trim();
+      return { t, c: w.confidence, b: bounds(w, t), ...w.bbox };
+    });
 }
 
 // Share of the smaller box covered by the overlap (1 = one box inside the other).
