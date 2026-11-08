@@ -8,7 +8,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Copy text from video (Alt+Shift+C)",
+    "default_title": "Copy text from video",
     "default_icon": {
       "16": "icons/16.png",
       "32": "icons/32.png",
@@ -25,8 +25,8 @@
   "commands": {
     "_execute_action": {
       "suggested_key": {
-        "default": "Alt+Shift+C",
-        "mac": "Alt+Shift+C"
+        "default": "Ctrl+Shift+C",
+        "mac": "MacCtrl+Shift+C"
       },
       "description": "Freeze frame and select text from the video"
     }
