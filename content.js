@@ -69,14 +69,6 @@
     @keyframes pop { from { opacity: 0; transform: scale(.88) translateY(6px); } }
     .count { font-weight: 500; color: rgba(255,255,255,.75); }
 
-    .hint {
-      bottom: 20px; left: 50%; display: flex; align-items: center; gap: 16px; height: 34px; padding: 0 16px;
-      border-radius: 17px; font-size: 12px; color: rgba(255,255,255,.8);
-      transform: translateX(-50%); animation: rise .5s .1s var(--spring) both;
-    }
-    @keyframes rise { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
-    .hint span { display: inline-flex; align-items: center; gap: 6px; }
-
     .ln {
       position: absolute; z-index: 1; border-radius: 8px; pointer-events: none;
       background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.26);
@@ -478,18 +470,7 @@
     const copyBtn = el('button', { type: 'button' });
     const bar = el('div', { className: 'glass bar', hidden: true }, count, copyBtn);
 
-    const key = (k, label) => el('span', {}, el('kbd', { textContent: k }), label);
-    const hint = el(
-      'div',
-      { className: 'glass hint' },
-      key('Drag', 'select text'),
-      key('Double-click', 'word'),
-      key('Triple-click', 'line'),
-      key(MOD + 'A', 'all'),
-      key('Esc', 'close'),
-    );
-
-    const stage = el('div', { className: 'stage' }, canvas, el('div', { className: 'scrim' }), sweep, lineLayer, hov, hlLayer, marq, pill, bar, hint);
+    const stage = el('div', { className: 'stage' }, canvas, el('div', { className: 'scrim' }), sweep, lineLayer, hov, hlLayer, marq, pill, bar);
     root.append(el('style', { textContent: CSS }), stage);
     mount(host);
 
@@ -806,7 +787,7 @@
     };
 
     stage.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || busy || pill.contains(e.target) || bar.contains(e.target) || hint.contains(e.target)) return;
+      if (e.button !== 0 || busy || pill.contains(e.target) || bar.contains(e.target)) return;
       e.preventDefault();
       stage.setPointerCapture(e.pointerId);
       const p = point(e);
