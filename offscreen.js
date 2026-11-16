@@ -25,10 +25,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 });
 
-// Words Tesseract is sure about; single stray glyphs need very high confidence.
+// Words Tesseract is sure about; single stray glyphs need very high confidence. Threshold is 50
+// because superscripts (footnote digits) drag a word's score down ("bald⁵" scored 58).
+// Punctuation-only tokens ("...", "—") count only when confident and not a lone mark.
 function isWord(w) {
-  const letters = w.text.replace(/[^\p{L}\p{N}]/gu, '');
-  return w.confidence >= 60 && letters.length > 0 && (letters.length > 1 || w.confidence >= 85);
+  const t = w.text.trim();
+  const letters = t.replace(/[^\p{L}\p{N}]/gu, '');
+  if (!letters.length) return t.length > 1 && w.confidence >= 80;
+  return w.confidence >= 50 && (letters.length > 1 || w.confidence >= 85);
 }
 
 // x positions of the n+1 gaps around a word's n characters, so the UI can place a caret between
