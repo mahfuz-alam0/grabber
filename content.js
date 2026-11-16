@@ -325,9 +325,10 @@
 
   // Groups loose words (frame pixels) into lines, then returns lines and words in reading order.
   // Rows come from vertical overlap; a row splits into separate lines at wide horizontal gaps.
+  // Tallest words go first so rows are seeded by full-height text and small marks (=, superscripts) join them.
   function layout(raw) {
     const rows = [];
-    for (const w of [...raw].sort((a, b) => a.y0 + a.y1 - b.y0 - b.y1)) {
+    for (const w of [...raw].sort((a, b) => b.y1 - b.y0 - (a.y1 - a.y0))) {
       const h = w.y1 - w.y0;
       const row = rows.find((r) => Math.min(r.y1, w.y1) - Math.max(r.y0, w.y0) > 0.5 * Math.min(r.y1 - r.y0, h));
       if (row) {
@@ -338,24 +339,24 @@
         rows.push({ words: [w], y0: w.y0, y1: w.y1 });
       }
     }
-    rows.sort((a, b) => a.y0 + a.y1 - b.y0 - b.y1);
-
-    const lines = [];
+    const found = [];
     for (const row of rows) {
       let line = null;
       for (const w of row.words.sort((a, b) => a.x0 - b.x0)) {
-        if (line && w.x0 - line.x1 < 4 * Math.max(w.y1 - w.y0, line.y1 - line.y0)) {
+        // Word spaces are under one text height; a column gutter is wider.
+        if (line && w.x0 - line.x1 < 2 * Math.max(w.y1 - w.y0, line.y1 - line.y0)) {
           line.words.push(w);
           line.x1 = Math.max(line.x1, w.x1);
           line.y0 = Math.min(line.y0, w.y0);
           line.y1 = Math.max(line.y1, w.y1);
         } else {
           line = { words: [w], x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1 };
-          lines.push(line);
+          found.push(line);
         }
       }
     }
 
+    const lines = readingOrder(found);
     const words = [];
     lines.forEach((l, i) => {
       for (const w of l.words) {
@@ -364,6 +365,32 @@
       }
     });
     return { lines, words };
+  }
+
+  // Recursive XY-cut: split the lines at the widest empty band no line crosses (a column gutter or
+  // the space between rows), then read each side in turn. A side column is read after the main
+  // text instead of interleaved with it. Ties go to rows.
+  function readingOrder(lines) {
+    if (lines.length < 2) return lines;
+    const cut = (a0, a1) => {
+      const s = [...lines].sort((p, q) => p[a0] - q[a0]);
+      let end = s[0][a1];
+      let gap = 0;
+      let at = 0;
+      for (let i = 1; i < s.length; i++) {
+        if (s[i][a0] - end > gap) {
+          gap = s[i][a0] - end;
+          at = i;
+        }
+        end = Math.max(end, s[i][a1]);
+      }
+      return { gap, parts: [s.slice(0, at), s.slice(at)] };
+    };
+    const x = cut('x0', 'x1');
+    const y = cut('y0', 'y1');
+    const best = x.gap > y.gap ? x : y;
+    if (!best.gap) return [...lines].sort((a, b) => a.y0 + a.y1 - b.y0 - b.y1);
+    return best.parts.flatMap(readingOrder);
   }
 
   async function copy(text) {

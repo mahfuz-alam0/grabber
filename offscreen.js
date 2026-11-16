@@ -30,9 +30,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 // Punctuation-only tokens ("...", "—") count only when confident and not a lone mark.
 function isWord(w) {
   const t = w.text.trim();
-  const letters = t.replace(/[^\p{L}\p{N}]/gu, '');
-  if (!letters.length) return t.length > 1 && w.confidence >= 80;
-  return w.confidence >= 50 && (letters.length > 1 || w.confidence >= 85);
+  const n = letters(t);
+  if (!n) return t.length > 1 && w.confidence >= 80;
+  return w.confidence >= 50 && (n > 1 || w.confidence >= 85);
+}
+
+const letters = (t) => t.replace(/[^\p{L}\p{N}]/gu, '').length;
+
+// A line with a confident word is real text, so its weak words are real too: keep them rather than
+// leave holes mid-line. A footnote superscript can drop a correctly read word to 0 ("bald⁵").
+function keepWords(line) {
+  const strong = line.words.some((w) => w.confidence >= 80 && letters(w.text) > 1);
+  return line.words.filter((w) => isWord(w) || (strong && (letters(w.text) > 1 || (w.confidence >= 30 && w.text.trim()))));
 }
 
 // x positions of the n+1 gaps around a word's n characters, so the UI can place a caret between
@@ -53,8 +62,7 @@ function bounds(w, text) {
 async function readWords(worker, image) {
   const { data } = await worker.recognize(image, {}, { blocks: true });
   return data.blocks
-    .flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words)))
-    .filter(isWord)
+    .flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap(keepWords)))
     .map((w) => {
       const t = w.text.trim();
       return { t, c: w.confidence, b: bounds(w, t), ...w.bbox };
@@ -70,11 +78,15 @@ function overlap(a, b) {
 }
 
 // Passes in priority order: text-fill-only images first (best on captions over video), the
-// plain grey image last (covers dark text on light backgrounds). Later passes only add words
-// they are very sure about that earlier passes did not already find.
+// plain grey image last (covers dark text on light backgrounds). The pass that reads the most
+// confident text is the base (ties go to the earlier pass); the others only add words they are
+// very sure about that the base did not already find.
 function mergeWords(...passes) {
-  const out = [...passes[0]];
-  for (const pass of passes.slice(1)) {
+  const score = (ws) => ws.reduce((s, w) => s + w.c * letters(w.t), 0);
+  const base = passes.reduce((a, b) => (score(b) > score(a) ? b : a));
+  const out = [...base];
+  for (const pass of passes) {
+    if (pass === base) continue;
     for (const w of pass) {
       if (w.c >= 80 && !out.some((o) => overlap(o, w) > 0.5)) out.push(w);
     }
