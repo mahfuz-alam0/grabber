@@ -97,7 +97,6 @@
     copy: ['M8 8h11a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z', 'M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h2'],
     check: ['M5 12.5l4.5 4.5L19 7.5'],
     close: ['M6 6l12 12', 'M18 6L6 18'],
-    all: ['M4 7h16', 'M4 12h16', 'M4 17h10'],
   };
 
   let ui = null;
@@ -145,25 +144,6 @@
     const [head, body] = dataUrl.split(',');
     const bytes = Uint8Array.from(atob(body), (c) => c.charCodeAt(0));
     return new Blob([bytes], { type: head.slice(5, head.indexOf(';')) });
-  }
-
-  function findTargets() {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const scope = document.fullscreenElement;
-    const targets = [];
-    for (const node of document.querySelectorAll('video, iframe')) {
-      if (scope && scope !== node && !scope.contains(node)) continue;
-      const b = node.getBoundingClientRect();
-      const left = Math.max(0, b.left);
-      const top = Math.max(0, b.top);
-      const right = Math.min(vw, b.right);
-      const bottom = Math.min(vh, b.bottom);
-      if (right - left < 80 || bottom - top < 60) continue;
-      if (getComputedStyle(node).visibility === 'hidden') continue;
-      targets.push({ x: left / vw, y: top / vh, w: (right - left) / vw, h: (bottom - top) / vh });
-    }
-    return targets;
   }
 
   function pauseVideos() {
@@ -326,17 +306,25 @@
   // Groups loose words (frame pixels) into lines, then returns lines and words in reading order.
   // Rows come from vertical overlap; a row splits into separate lines at wide horizontal gaps.
   // Tallest words go first so rows are seeded by full-height text and small marks (=, superscripts) join them.
+  // Row bands never grow, so lines cannot chain together. Boxes far taller than the median (OCR
+  // boxes that swallowed part of the line below) go last, so they cannot seed a row spanning two
+  // lines, and are clipped to the row they join.
   function layout(raw) {
+    const heights = raw.map((w) => w.y1 - w.y0).sort((a, b) => a - b);
+    const tall = 1.8 * (heights[heights.length >> 1] ?? 0);
+    const isTall = (w) => w.y1 - w.y0 > tall;
     const rows = [];
-    for (const w of [...raw].sort((a, b) => b.y1 - b.y0 - (a.y1 - a.y0))) {
+    for (const w of [...raw].sort((a, b) => isTall(a) - isTall(b) || b.y1 - b.y0 - (a.y1 - a.y0))) {
       const h = w.y1 - w.y0;
       const row = rows.find((r) => Math.min(r.y1, w.y1) - Math.max(r.y0, w.y0) > 0.5 * Math.min(r.y1 - r.y0, h));
-      if (row) {
-        row.words.push(w);
-        row.y0 = Math.min(row.y0, w.y0);
-        row.y1 = Math.max(row.y1, w.y1);
-      } else {
+      if (!row) {
         rows.push({ words: [w], y0: w.y0, y1: w.y1 });
+        continue;
+      }
+      row.words.push(w);
+      if (isTall(w)) {
+        w.y0 = Math.max(w.y0, row.y0);
+        w.y1 = Math.min(w.y1, row.y1);
       }
     }
     const found = [];
@@ -450,7 +438,6 @@
 
   async function start(shot) {
     close();
-    const targets = findTargets();
     pauseVideos();
     const bmp = await createImageBitmap(dataUrlToBlob(shot));
     if (document.fullscreenElement && REPLACED.has(document.fullscreenElement.tagName)) {
@@ -489,9 +476,8 @@
     const marq = el('div', { className: 'marq', hidden: true });
 
     const status = el('div', { className: 'status', role: 'status' });
-    const allBtn = el('button', { className: 'btn', type: 'button', title: `Select all (${MOD}A)`, hidden: true }, svg('all'), 'Select all');
     const closeBtn = el('button', { className: 'btn icon', type: 'button', title: 'Close (Esc)', ariaLabel: 'Close' }, svg('close'));
-    const pill = el('div', { className: 'glass pill' }, status, el('div', { className: 'sep' }), allBtn, closeBtn);
+    const pill = el('div', { className: 'glass pill' }, status, el('div', { className: 'sep' }), closeBtn);
 
     const count = el('span', { className: 'count' });
     const copyBtn = el('button', { type: 'button' });
@@ -502,7 +488,6 @@
     mount(host);
 
     // ---- state ----
-    let raw = [];
     let lines = [];
     let words = [];
     let glyphs = [];
@@ -711,7 +696,6 @@
           return node;
         }),
       );
-      allBtn.hidden = !glyphs.length;
       renderSel();
     };
 
@@ -724,7 +708,7 @@
       return res.words.map((w) => ({ t: w.t, b: w.b.map((x) => back(x, geo.sx)), x0: back(w.x0, geo.sx), y0: back(w.y0, geo.sy), x1: back(w.x1, geo.sx), y1: back(w.y1, geo.sy) }));
     };
 
-    const detect = async (rect, psm, merge) => {
+    const detect = async (rect) => {
       const id = ++job;
       busy = true;
       stage.classList.add('busy');
@@ -733,24 +717,18 @@
       const area = fracToStage(rect);
       place(sweep, { l: area.l, t: area.t, r: area.l + area.w, b: area.t + area.h });
       sweep.hidden = false;
-      setStatus('busy', merge ? 'Scanning area…' : 'Detecting text…');
+      setStatus('busy', 'Reading text…');
       try {
-        const found = await scan(rect, psm);
+        const found = await scan(rect, 6);
         if (id !== job) return;
-        const px = { x0: rect.x * bmp.width, x1: (rect.x + rect.w) * bmp.width, y0: rect.y * bmp.height, y1: (rect.y + rect.h) * bmp.height };
-        const inside = (w) => (w.x0 + w.x1) / 2 >= px.x0 && (w.x0 + w.x1) / 2 <= px.x1 && (w.y0 + w.y1) / 2 >= px.y0 && (w.y0 + w.y1) / 2 <= px.y1;
-        raw = merge ? raw.filter((w) => !inside(w)).concat(found) : found;
-        ({ lines, words } = layout(raw));
+        ({ lines, words } = layout(found));
         buildGlyphs();
         render();
         if (!found.length) {
-          setStatus('warn', merge ? 'No text in that area' : 'No text found', 'Drag over an area to scan it');
+          setStatus('warn', 'No text in that area', 'Drag a box around the text');
         } else {
-          setStatus('ok', `${words.length} word${words.length === 1 ? '' : 's'} detected`);
-          if (merge) {
-            const fresh = words.filter((w) => found.includes(w));
-            setRange(Math.min(...fresh.map((w) => w.gs)), Math.max(...fresh.map((w) => w.ge)));
-          }
+          setStatus('ok', `${words.length} word${words.length === 1 ? '' : 's'} grabbed`, 'Drag again for another area');
+          selectAll();
         }
       } catch (err) {
         if (id === job) setStatus('warn', 'Scan failed', err.message);
@@ -866,16 +844,13 @@
       const b = toFrac(d.to);
       const rect = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) };
       const size = fracToStage(rect);
-      if (size.w >= 24 && size.h >= 14) detect(rect, 6, true);
+      if (size.w >= 24 && size.h >= 14) detect(rect);
     });
 
     stage.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
-    allBtn.addEventListener('click', selectAll);
     closeBtn.addEventListener('click', closeSoft);
     copyBtn.addEventListener('click', doCopy);
 
-    // ---- go: scan the biggest video on screen, else the whole viewport ----
-    const biggest = targets.sort((a, b) => b.w * b.h - a.w * a.h)[0];
-    detect(biggest || { x: 0, y: 0, w: 1, h: 1 }, 11, false);
+    setStatus('ok', 'Drag over the text to grab it');
   }
 })();

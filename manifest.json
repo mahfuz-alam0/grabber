@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Video Text Grabber",
   "version": "1.2.0",
-  "description": "Freeze any video frame, select the detected text like Google Lens and copy it. Offline OCR.",
+  "description": "Freeze any video frame, drag over the text you want and copy it. Offline OCR.",
   "permissions": ["activeTab", "scripting", "offscreen"],
   "background": {
     "service_worker": "background.js"
