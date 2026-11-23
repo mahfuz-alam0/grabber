@@ -109,7 +109,7 @@
       close();
       sendResponse({});
     } else if (msg?.type === 'vtg:start') {
-      start(msg.shot).catch((err) => console.warn('Video Text Grabber:', err));
+      start(msg.shot).catch((err) => console.warn('Text Grabber:', err));
       sendResponse({});
     }
   });

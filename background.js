@@ -34,7 +34,7 @@ async function run(tab) {
     const shot = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
     await chrome.tabs.sendMessage(tab.id, { type: 'vtg:start', shot });
   } catch (err) {
-    console.warn('Video Text Grabber:', err);
+    console.warn('Text Grabber:', err);
     flashError(tab.id);
   }
 }
