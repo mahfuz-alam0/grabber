@@ -152,7 +152,7 @@
     }
   }
 
-  // Crops rect (fractions of the frame) and returns three OCR candidates plus the crop geometry.
+  // Crops rect (fractions of the frame) and returns four OCR candidates plus the crop geometry.
   function prepare(bmp, r) {
     const sx = Math.round(r.x * bmp.width);
     const sy = Math.round(r.y * bmp.height);
@@ -172,6 +172,7 @@
     const px = img.data;
     const n = w * h;
     const lum = new Uint8Array(n);
+    const white = new Uint8Array(n); // darkest channel: high only where the pixel is white-ish
     const hist = new Uint32Array(256);
     let edgeSum = 0;
     let edgeCount = 0;
@@ -181,6 +182,7 @@
       const l = (px[j] * 299 + px[j + 1] * 587 + px[j + 2] * 114) / 1000;
       lum[i] = l;
       hist[lum[i]]++;
+      white[i] = Math.min(px[j], px[j + 1], px[j + 2]);
       const x = i % w;
       const y = (i / w) | 0;
       if (x < 2 || y < 2 || x >= w - 2 || y >= h - 2) {
@@ -229,9 +231,7 @@
     const mask = new Uint8Array(n);
     const t2 = brightCut(hist);
     for (let i = 0; i < n; i++) mask[i] = lum[i] >= t2 ? 1 : 0;
-    const render = (solid) => {
-      const m = mask.slice();
-      dropBlobs(m, w, h, solid);
+    const draw = (m) => {
       for (let i = 0; i < n; i++) {
         const j = i * 4;
         px[j] = px[j + 1] = px[j + 2] = m[i] ? 0 : 255;
@@ -239,7 +239,25 @@
       wctx.putImageData(img, 0, 0);
       return frame();
     };
-    return { gray, ink: render(true), edge: render(false), geo: { sx, sy, scale, pad } };
+    const ink = mask.slice();
+    const edge = mask.slice();
+    dropBlobs(ink, w, h, true);
+    dropBlobs(edge, w, h, false);
+
+    // White text over a white area (shirt, wall) joins it in the masks above and is dropped with it.
+    // Its shadow still separates it, so keep pixels that stand out from the local background.
+    const back = opening(white, w, h, Math.max(4, Math.round(Math.max(w, h) * 0.02)));
+    const stands = new Uint8Array(n);
+    const standsHist = new Uint32Array(256);
+    for (let i = 0; i < n; i++) {
+      if (white[i] - back[i] <= 40) continue;
+      stands[i] = white[i];
+      standsHist[white[i]]++;
+    }
+    const cut = brightCut(standsHist);
+    const hat = stands.map((v) => (v && v >= cut ? 1 : 0));
+
+    return { gray, ink: draw(ink), edge: draw(edge), hat: draw(hat), geo: { sx, sy, scale, pad } };
   }
 
   // 3-class Otsu on the luminance histogram; returns the lower bound of the brightest class.
@@ -263,6 +281,33 @@
       }
     }
     return cut;
+  }
+
+  // Grey opening with a (2r+1)px square: flattens bright details narrower than it (text strokes) and
+  // keeps wider areas, which leaves the background behind the text.
+  function opening(src, w, h, r) {
+    // Sliding min (sign 1) or max (sign -1) along `count` lines of `len` pixels.
+    const slide = (a, sign, len, step, count, skip) => {
+      const out = new Uint8Array(a.length);
+      const dq = new Int32Array(len);
+      for (let o = 0; o < count * skip; o += skip) {
+        let head = 0;
+        let tail = 0;
+        for (let i = 0; i < len + r; i++) {
+          if (i < len) {
+            const v = a[o + i * step] * sign;
+            while (tail > head && a[o + dq[tail - 1] * step] * sign >= v) tail--;
+            dq[tail++] = i;
+          }
+          if (i < r) continue;
+          if (dq[head] < i - 2 * r) head++;
+          out[o + (i - r) * step] = a[o + dq[head] * step];
+        }
+      }
+      return out;
+    };
+    const square = (a, sign) => slide(slide(a, sign, w, 1, h, w), sign, h, w, w, 1);
+    return square(square(src, 1), -1);
   }
 
   // Clears bright blobs that cannot be letters: anything touching the crop edge, plus (with

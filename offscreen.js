@@ -78,20 +78,29 @@ function overlap(a, b) {
 }
 
 // Passes in priority order: text-fill-only images first (best on captions over video), the
-// plain grey image last (covers dark text on light backgrounds). The pass that reads the most
-// confident text is the base (ties go to the earlier pass); the others only add words they are
-// very sure about that the base did not already find.
+// plain grey image last (covers dark text on light backgrounds). Words that overlap across passes
+// are readings of the same spot, so the pass that reads the most there wins it ("kommt" beats "kom",
+// "Das" + "Geld" beats "DasGeldko"). Spots the base missed (the base is the pass with the most
+// confident text; ties go to the earlier pass) count only if the word is very sure.
 function mergeWords(...passes) {
-  const score = (ws) => ws.reduce((s, w) => s + w.c * letters(w.t), 0);
-  const base = passes.reduce((a, b) => (score(b) > score(a) ? b : a));
-  const out = [...base];
-  for (const pass of passes) {
-    if (pass === base) continue;
-    for (const w of pass) {
-      if (w.c >= 80 && !out.some((o) => overlap(o, w) > 0.5)) out.push(w);
+  const sum = (ws, floor) => ws.reduce((s, w) => s + (w.c - floor) * letters(w.t), 0);
+  const most = (reads, floor) => reads.reduce((a, b) => (sum(b, floor) > sum(a, floor) ? b : a));
+  const base = passes.indexOf(most(passes, 0));
+  let spots = [];
+  passes.forEach((ws, p) => {
+    for (const w of ws) {
+      if (p !== base && w.c < 50) continue;
+      const same = (s) => s.some((o) => o.p !== p && overlap(o.w, w) > 0.2);
+      spots = [...spots.filter((s) => !same(s)), [{ p, w }, ...spots.filter(same).flat()]];
     }
-  }
-  return out;
+  });
+  return spots.flatMap((s) => {
+    const reads = passes.map((_, p) => s.filter((o) => o.p === p).map((o) => o.w));
+    const best = most(reads, 60);
+    if (!reads[base].length) return best.filter((w) => w.c >= 80 && letters(w.t) > 1);
+    // A near tie is noise ("Kina" 93 vs "Kino" 91), so stay with the base.
+    return sum(best, 60) > 1.1 * sum(reads[base], 60) ? best : reads[base];
+  });
 }
 
 async function scan({ images, psm }) {
@@ -101,7 +110,7 @@ async function scan({ images, psm }) {
     preserve_interword_spaces: '1',
   });
   const passes = [];
-  for (const name of ['ink', 'edge', 'gray']) {
+  for (const name of ['ink', 'edge', 'hat', 'gray']) {
     passes.push(await readWords(worker, images[name]).catch(() => []));
   }
   return { words: mergeWords(...passes) };
